@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vercel Deploy"
+  short_description: "Deploy projects to Vercel with public aliases"
+  default_prompt: "Use $vercel-deploy to publish this project to Vercel, make it public, assign a clean alias, and verify the live URL."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Game Sprite Pipeline"
+  short_description: "Generate and process consistent game sprite sheets."
+  default_prompt: "Help me generate, clean, align, and integrate consistent game-ready sprite sheets for a character animation."
