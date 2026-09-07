@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "description": "Delegate tasks to OpenAI Codex CLI as a subagent via /codex command",
   "author": {
-    "name": "the user"
+    "name": "joet203"
   }
 }

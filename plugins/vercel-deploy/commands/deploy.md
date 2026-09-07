@@ -32,8 +32,8 @@ Try 2-3 short alias options. If one is taken, try the next.
 
 Always try to set a short, memorable alias. Vercel's auto-generated names are ugly (e.g. `nick-lake.vercel.app`). Try these in order:
 
-- **Shortest recognizable name** — e.g. `ntochka`, `drnick`, `mabeans`, `bizd`
-- **Abbreviations/acronyms** — e.g. `ntas` (Nick Tochka Appreciation Society)
+- **Shortest recognizable name** — e.g. `mabeans`, `bizd`
+- **Abbreviations or acronyms** — e.g. the project's initials
 - **Domain-style names** — e.g. `mabirds`, `survivor-odds`
 - If the first choice is taken, try 2-3 more before falling back
 
@@ -51,4 +51,4 @@ Try multiple aliases — a project can have several pointing to the same deploym
 - **No build step needed**: For vanilla HTML/CSS/JS projects, Vercel serves them directly — no framework config required.
 - **Vercel auth token**: Lives at `~/Library/Application Support/com.vercel.cli/auth.json`.
 - **Check existing aliases**: Run `vercel ls` to see current deployments and their URLs.
-- **Existing projects**: the user's Vercel projects use the team your Vercel team. Check `vercel project ls` to avoid name collisions.
+- **Existing projects**: check `vercel project ls` for what already exists on your team, to avoid name collisions.

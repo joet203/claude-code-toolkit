@@ -1,87 +1,112 @@
 # claude-code-toolkit
 
-A curated collection of **custom skills, plugins, and terminal add-ons** I built to get more out of agentic coding tools — [Claude Code](https://docs.anthropic.com/en/docs/claude-code), the [OpenAI Codex CLI](https://github.com/openai/codex), and the [kitty](https://sw.kovidgoyal.net/kitty/) terminal.
+Nine agent-invocable skills, two Claude Code slash commands, and 661 lines of Python and
+bash that extend Claude Code, the OpenAI Codex CLI, and the kitty terminal. Every one of
+them started as a failure that repeated: a deploy that reported success while serving a
+cached page, an image backend that silently stretched any non-square request, a terminal
+command that moved the wrong agent session.
 
-These are the pieces I actually use day to day. They're shared here as working examples of how to extend agent CLIs with reusable, model-invocable capabilities — and a couple of small terminal hacks for running several agent sessions at once.
+![tag-note.py drawing a note over a parked kitty tab, and peel.sh reporting where a session lives](docs/screenshot.png)
 
-> Everything here has been generalized from my personal setup — personal automations (job-hunt, resume, companion assistant) are intentionally left out. What remains is the genuinely reusable stuff.
+## Run it
 
----
+Two pieces run standalone, with no agent and no setup:
 
-## What's inside
-
-```
-skills/
-  claude/        Standalone Claude Code skills (drop into ~/.claude/skills/)
-  codex/         OpenAI Codex CLI skills (drop into ~/.codex/skills/)
-plugins/         Claude Code plugins (marketplace-style, with plugin.json)
-kitty/           Terminal add-ons for running/parking multiple agent sessions
-docs/            Setup notes
-```
-
-### 🧠 Claude Code skills — `skills/claude/`
-
-Standalone skills (a `SKILL.md` with YAML frontmatter). Claude auto-discovers them and invokes them by description — no registration needed.
-
-| Skill | What it does |
-|---|---|
-| **visualize** | Render answers as a styled HTML page instead of dumping text in the terminal — research, comparisons, decision matrices, status dashboards. |
-| **deploy** | Deploy to Vercel *and verify the live URL actually serves new content* — catches cache, SSO-protection, and duplicate-file footguns that hide behind "Deployment succeeded." |
-| **factcheck** | Verify factual claims (prices, hours, quotes, citations, laws, dates) via web search before they land in published content; flag the unverifiable rather than guessing. |
-| **grill-me** | Stress-test a plan or design by interviewing you relentlessly, resolving each branch of the decision tree until there's shared understanding. |
-| **image-gen** | Generate images from text across three cost-ordered backends (local ComfyUI → pollinations.ai → Codex `gpt-image-2`). Includes the helper scripts. |
-
-### ⚙️ Codex CLI skills — `skills/codex/`
-
-| Skill | What it does |
-|---|---|
-| **vercel-deploy** | Deploy a project to Vercel from the Codex CLI and ensure it's publicly reachable. |
-| **game-sprite-pipeline** | Generate, clean, align, and pack consistent game-ready sprite sheets from AI image output. Includes scripts. |
-| **offbeat-joke** | Write short, genuinely offbeat / surreal / statistically-unlikely jokes. |
-
-### 🔌 Plugins — `plugins/`
-
-Packaged Claude Code plugins (`.claude-plugin/plugin.json` + `commands/`).
-
-| Plugin | What it does |
-|---|---|
-| **codex** | Delegate a task to the OpenAI Codex CLI as a subagent from inside Claude Code — including fan-out to several Codex jobs in parallel. |
-| **vercel-deploy** | A slash-command wrapper around the verified Vercel deploy flow. |
-
-### 🐱 kitty terminal add-ons — `kitty/`
-
-Small hacks for working with **multiple live agent sessions** in one terminal. See [`kitty/README.md`](kitty/README.md).
-
-| Add-on | What it does |
-|---|---|
-| **tag-note.py** | Press a hotkey, type a short note, and a big bold label is drawn over a parked tab — a "where I left off" reminder. Pure stdlib, tiny built-in block font. |
-| **peel-skill** | A Claude Code skill that moves the current session's tab into a shared side window so several Claude sessions can sit side by side. |
-
----
-
-## Install
-
-**Claude Code skills** — copy any folder into your skills directory:
 ```bash
-cp -R skills/claude/visualize ~/.claude/skills/
-```
-They're live-reloaded and auto-discovered. No config.
+git clone https://github.com/joet203/claude-code-toolkit
+cd claude-code-toolkit
 
-**Codex skills** — same idea:
+python3 kitty/tag-note.py          # type a note, watch it drawn in block letters, press a key
+bash kitty/peel-skill/peel.sh status
+```
+
+`tag-note.py` prompts, then paints your note across the lower half of the terminal in a
+block font it carries itself. Outside kitty it pauses a few seconds first, looking for a
+neighbouring session to dim behind the note, then draws anyway. `peel.sh status` prints which kitty window the current tab
+is in; run outside kitty it exits 1 with `KITTY_WINDOW_ID is empty ... Refusing to guess
+a tab`, which is the screenshot's second panel.
+
+Installing a skill is a copy. They are discovered by their description, so nothing gets
+registered and nothing gets restarted:
+
 ```bash
+cp -R skills/claude/deploy   ~/.claude/skills/
+cp -R kitty/peel-skill       ~/.claude/skills/peel
 cp -R skills/codex/offbeat-joke ~/.codex/skills/
 ```
 
-**Plugins** — copy into your plugins source dir, register in your marketplace, and enable in `~/.claude/settings.json`. See each plugin's folder.
+Optional environment: `COMFYUI_HOST` points `skills/claude/image-gen/comfy_gen.py` at a
+non-default ComfyUI server (`http://127.0.0.1:8188` otherwise). The Vercel skills read the
+token the `vercel` CLI already wrote to disk; no key is stored here. `plugins/codex` is a
+packaged plugin (`.claude-plugin/plugin.json` plus its command); `plugins/vercel-deploy`
+ships the command file only, so drop it straight into a commands directory.
 
-**kitty add-ons** — see [`kitty/README.md`](kitty/README.md) for the two config lines.
+## How it works
 
----
+**A skill is a trigger plus a list of the ways this has gone wrong before.** The YAML
+`description` is the entire dispatch mechanism, so it is written as the phrases a user
+actually says, not a summary of the feature. Everything below it exists to stop the model
+doing the obvious wrong thing. The deploy skill will not accept HTTP 200 as evidence: it
+greps the live page for a string that was just added, because "Deployment succeeded"
+survives a stale edge cache. The Codex plugin ships a table of five required flags with a
+reason each, and the reason for `< /dev/null` is that stdin in an agent shell is an open
+pipe that never sends EOF, so `codex exec` waits on it forever and looks like a hung
+model. Factcheck lists the specific fabrications that got past earlier sessions. The
+skills that get invoked correctly are the ones that name their failure modes.
 
-## Why this exists
+**peel.sh is 108 lines of shell and most of it is choosing the right matcher.** It moves
+a live agent session between kitty OS windows over the remote-control socket. Two details
+carry the whole thing. kitty's `detach-tab` moves a tab into another window when given
+`--target-tab` and into a brand new window when not, so peel and unpeel are one call with
+one argument dropped. And the tab has to be matched with `window_id:$KITTY_WINDOW_ID`,
+never `id:`, because `id:` resolves against tab ids first and the two id ranges overlap
+once sessions have churned; that mismatch spent a debugging session being blamed on focus
+and then on stale environment before the matcher turned out to be the cause. The script
+refuses to act when it cannot identify its own tab rather than picking a plausible one,
+and its error text names the fix, including the one case it cannot solve (a kitty started
+from Spotlight is a different process and unreachable over the socket).
 
-Agent CLIs are far more useful when you teach them reusable moves instead of re-explaining the same workflow every session. A skill is just a markdown file with a good description — the model decides when to use it. These are the ones that earned a permanent place in my setup.
+**The image and sprite scripts are mostly compensation for what the upstream models
+actually do.** Pollinations serves Sana, which renders natively at 512 square: ask for 1600x640 and it
+returns a stretched square, ask for a large square and it letterboxes with black bars.
+`pollinations_gen.py` therefore renders a modest square regardless of what you asked for,
+center-crops to your aspect ratio, and upscales with `sips`, so the caller just passes the
+width and height it wants. `comfy_gen.py` builds the seven-node ComfyUI graph as literal
+JSON, discovers the checkpoint name from `/object_info` instead of hardcoding it, and
+exits 1 for an unreachable server versus 2 for a failed generation so a caller can retry
+the right one. `process_sprite_sheet.py` treats generated sprite sheets as raw material:
+it converts the fake checkerboard a model paints instead of transparency into real alpha,
+finds each pose as a flood-filled connected component, then bottom-aligns every pose to a
+single baseline in a fixed frame box and writes the pivot and frame counts to JSON, which
+is the part that makes the frames usable in an engine.
+
+## Limitations
+
+- No tests and no CI. Nothing is packaged or versioned; installation is copying folders,
+  and an update means copying them again.
+- Parts are macOS-only. `pollinations_gen.py` shells out to `sips`, and the Vercel skills
+  read the CLI token from `~/Library/Application Support/`.
+- Several skills encode third-party CLI flags and API shapes as they were in mid-2026
+  (Vercel's project API, Codex's sandbox flags, what Pollinations serves). When those
+  change the skill is confidently wrong and nothing here detects it.
+- `process_sprite_sheet.py` does its flood fill in pure Python with per-pixel `getpixel`.
+  It is fine on one sheet of a few megapixels and slow on anything larger. It also needs
+  Pillow, the only third-party dependency in the repo.
+- Dispatch is by description, so overlapping descriptions compete. `skills/claude/deploy`
+  and `skills/codex/vercel-deploy` already cover the same ground on two different CLIs.
+
+## What's here
+
+```
+skills/claude/    deploy, factcheck, grill-me, image-gen, visualize
+skills/codex/     vercel-deploy, game-sprite-pipeline, offbeat-joke
+kitty/            tag-note.py, and peel-skill (a skill plus peel.sh)
+plugins/          codex, vercel-deploy
+```
+
+Python 3 (standard library only, except Pillow in the sprite script), bash, kitty remote
+control, Claude Code skills and plugins, Codex CLI skills.
 
 ## License
 
-[MIT](LICENSE) — use, fork, adapt freely.
+[MIT](LICENSE)

@@ -20,7 +20,7 @@ Deploy to production quickly and leave the site in a shareable state: linked pro
 
 ## Linking
 
-- Prefer scope your Vercel team unless the repo is already linked to a different scope or the user asks for another team.
+- Prefer your default team scope unless the repo is already linked to a different one, or the user asks for another team.
 - If `.vercel/project.json` is missing and the user wants a specific hostname, create the project with that name first:
 
 ```bash
